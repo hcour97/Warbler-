@@ -28,6 +28,12 @@ connect_db(app)
 ##############################################################################
 # User signup/login/logout
 
+## Part 1 Questions
+## 1. The logged in user is being kept track of, by adding them to the session. When the user logs out, they are removed from the session.
+## 2. Flask's g object is used to store data during the application context of a running web app.
+## 3. add_user_to_g adds the current user to Flask global
+## 4. @app.before_request allows you to run a function before any request.
+
 
 @app.before_request
 def add_user_to_g():
