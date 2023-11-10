@@ -3,14 +3,15 @@ import os
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
+import pdb
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
-app.app_context().push()
+# app.app_context().push()
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
@@ -31,7 +32,6 @@ connect_db(app)
 @app.before_request
 def add_user_to_g():
     """If we're logged in, add curr user to Flask global."""
-
     if CURR_USER_KEY in session:
         g.user = User.query.get(session[CURR_USER_KEY])
 
@@ -108,11 +108,13 @@ def login():
     return render_template('users/login.html', form=form)
 
 
-@app.route('/logout')
+@app.route('/logout', methods=["GET"])
 def logout():
     """Handle logout of user."""
 
-    # IMPLEMENT THIS
+    do_logout()
+    flash("User successfully logged out.")
+    return redirect("/login")
 
 
 ##############################################################################
@@ -210,6 +212,28 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
+    form = UserEditForm(obj=g.user)
+
+    if form.validate_on_submit():
+        pwd = form.password.data
+        if User.authenticate(username=g.user.username, password=pwd):
+            g.user.username = form.username.data
+            g.user.email = form.email.data
+            g.user.image_url = form.image_url.data
+            g.user.header_image_url = form.header_image_url.data
+            g.user.location = form.location.data
+            g.user.bio = form.bio.data
+
+            db.session.add(g.user)
+            db.session.commit()
+
+            flash("Profile successfully update", "success")
+            return redirect("/")
+        else:
+            flash("Incorrect password.", "danger")
+            return redirect("/users/profile")
+    else:
+        return render_template("/users/edit.html", form=form)
     # IMPLEMENT THIS
 
 
