@@ -1,12 +1,12 @@
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import Flask, render_template, request, flash, redirect, session, g, abort
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 import pdb
 
 from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
-from models import db, connect_db, User, Message
+from models import db, connect_db, User, Message, Likes
 
 CURR_USER_KEY = "curr_user"
 
@@ -157,6 +157,7 @@ def users_show(user_id):
                 .order_by(Message.timestamp.desc())
                 .limit(100)
                 .all())
+    
     return render_template('users/show.html', user=user, messages=messages)
 
 
@@ -240,7 +241,6 @@ def profile():
             return redirect("/users/profile")
     else:
         return render_template("/users/edit.html", form=form)
-    # IMPLEMENT THIS
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -307,6 +307,40 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+@app.route('/users/<int:user_id>/likes', methods=["GET"])
+def show_liked_messages(user_id):
+    """Display all the messages the logged in user has liked."""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    
+    user = User.query.get_or_404(user_id)
+    likes = user.likes
+    return render_template('users/likes.html', user=user, likes=likes)
+
+
+@app.route('/messages/<int:message_id>/like', methods=["POST"])
+def liked_messages(message_id):
+    """Toggle a liked message for the currently logged in user."""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    
+    liked_message = Message.query.get_or_404(message_id)
+    if liked_message.user_id == g.user.id:
+        return abort(403)
+    
+    user_likes = g.user.likes
+
+    if liked_message in g.user.likes:
+        g.user.likes = [like for like in user_likes if like != liked_message]
+    else:
+        g.user.likes.append(liked_message)
+
+    db.session.commit()
+    return redirect("/")
 
 ##############################################################################
 # Homepage and error pages
@@ -321,14 +355,15 @@ def homepage():
     """
 
     if g.user:
-        follower_ids = [follower.id for follower in g.user.following]
+        follower_ids = [follower.id for follower in g.user.following] + [g.user.id]
         messages = (Message
                     .query.filter(Message.user_id.in_(follower_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages)
+        liked_message_ids = [message.id for message in g.user.likes]
+        return render_template('home.html', messages=messages, likes=liked_message_ids)
 
     else:
         return render_template('home-anon.html')
