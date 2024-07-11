@@ -34,4 +34,3 @@ traitlets==4.3.2
 wcwidth==0.1.7
 Werkzeug==0.14.1
 WTForms==2.2.1
-
