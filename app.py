@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g, 
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 import pdb
+from dotenv import load_dotenv 
 
 from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
 from models import db, connect_db, User, Message, Likes
@@ -11,20 +12,27 @@ from models import db, connect_db, User, Message, Likes
 CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
-# app.app_context().push()
+
+
+# load environmental variables from .env file
+load_dotenv() 
 
 # Get DB_URI from environ variable (useful for production/testing) or,
 # if not set there, use development local db.
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    os.environ.get('DATABASE_URL', 'postgresql://postgres.drxgnybknftzxijfutpm:P4CfdCftItdGmRzw@aws-0-us-east-1.pooler.supabase.com:6543/postgres'))
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
+app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable if set, otherwise default to 5000
+    app.run(host='0.0.0.0', port=port)
+    
 ##############################################################################
 # User signup/login/logout
 
@@ -81,17 +89,18 @@ def signup():
                 image_url=form.image_url.data or User.image_url.default.arg,
             )
             db.session.commit()
+            do_login(user)
 
-        except IntegrityError:
-            flash("Username already taken", 'danger')
-            return render_template('users/signup.html', form=form)
+            return redirect("/")
 
-        do_login(user)
-
-        return redirect("/")
-
-    else:
-        return render_template('users/signup.html', form=form)
+        except IntegrityError as e:
+            if 'duplicate key value violates unique constraint "users_email_key"' in str(e):
+                form.email.errors.append('Email already taken. Please choose a different one.')
+            elif 'duplicate key value violates unique constraint "users_username_key"' in str(e):
+                form.username.errors.append('Username already taken. Please choose a different one.')
+            else:
+                flash("An error occurred. Please try again.", "danger")
+    return render_template('users/signup.html', form=form)
 
 
 @app.route('/login', methods=["GET", "POST"])
