@@ -3,6 +3,7 @@ blinker==1.6.3
 certifi==2024.2.2
 charset-normalizer==3.3.2
 click==8.1.7
+cython>=0.29.24
 Flask==2.2.5
 Flask-DebugToolbar==0.14.1
 gunicorn==22.0.0
