@@ -392,6 +392,9 @@ def add_header(req):
     return req
 
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable if set, otherwise default to 5000
-    app.run(host='0.0.0.0', port=port)
+# if __name__ == '__main__':
+#     port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable if set, otherwise default to 5000
+#     app.run(host='0.0.0.0', port=port)
+
+if __name__ == "__main__":
+    app.run(host=os.getenv('HOST'), port=int(os.getenv('PORT'),8080), debug=False)
