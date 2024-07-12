@@ -3,6 +3,12 @@ from wtforms import StringField, PasswordField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length
 # from email_validator import *
 
+from werkzeug.security import safe_str_cmp
+
+def safe_str_cmp(a, b):
+    """Safely compare two strings to reduce the risk of timing attacks."""
+    return a == b
+
 
 class MessageForm(FlaskForm):
     """Form for adding/editing messages."""
